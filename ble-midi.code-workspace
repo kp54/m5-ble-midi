@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".",
+		},
+	],
+	"settings": {},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"platformio.platformio-ide",
+		],
+		"unwantedRecommendations": [
+			"ms-vscode.cpptools-extension-pack",
+		],
+	},
+}
