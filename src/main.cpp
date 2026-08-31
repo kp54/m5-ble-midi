@@ -9,15 +9,7 @@ unsigned char g_volume = 63;
 bool g_is_touched = false;
 M5Canvas g_canvas;
 
-void setup()
-{
-    auto cfg = M5.config();
-    M5.begin(cfg);
-
-    g_canvas.createSprite(M5.Display.width(), M5.Display.height());
-}
-
-void paint(char tone)
+void paint()
 {
     int width = g_canvas.width();
     int height = g_canvas.height();
@@ -26,10 +18,10 @@ void paint(char tone)
 
     g_canvas.setCursor(0, 0);
     g_canvas.setTextSize(4);
-    g_canvas.printf("tone: %i\n", tone + 1);
+    g_canvas.printf("tone: %i\n", g_tone + 1);
     g_canvas.setCursor(0, TEXT_FACTOR * 4);
     g_canvas.setTextSize(3);
-    g_canvas.printf("%s\n", INSTRUMENT_NAMES[tone]);
+    g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
     g_canvas.drawFastHLine(0, TEXT_FACTOR * 7, width, TFT_WHITE);
 
     g_canvas.setCursor(0, TEXT_FACTOR * 8);
@@ -40,6 +32,15 @@ void paint(char tone)
     M5.Display.startWrite();
     g_canvas.pushSprite(&M5.Display, 0, 0);
     M5.Display.endWrite();
+}
+
+void setup()
+{
+    auto cfg = M5.config();
+    M5.begin(cfg);
+
+    g_canvas.createSprite(M5.Display.width(), M5.Display.height());
+    paint();
 }
 
 void loop()
@@ -55,6 +56,10 @@ void loop()
         delay(LOOP_DELAY);
         return;
     }
+
+    g_is_touched = M5.Touch.getCount() != 0;
+    if (!g_is_touched)
+        return;
 
     for (char i = 0; i < M5.Touch.getCount(); i++)
     {
@@ -87,7 +92,6 @@ void loop()
     if (128 <= g_volume && g_volume < 192)
         g_volume = 127;
 
-    g_is_touched = true;
-    paint(g_tone);
+    paint();
     delay(LOOP_DELAY);
 }
