@@ -1,4 +1,5 @@
 #include <M5Unified.h>
+#include <M5_SAM2695.h>
 
 extern const char *INSTRUMENT_NAMES[];
 const char TEXT_FACTOR = 8;
@@ -8,6 +9,7 @@ unsigned char g_tone = 0;
 unsigned char g_volume = 63;
 bool g_is_touched = false;
 M5Canvas g_canvas;
+M5_SAM2695 g_midi;
 
 void paint()
 {
@@ -34,18 +36,16 @@ void paint()
     M5.Display.endWrite();
 }
 
-void setup()
+void apply_values()
 {
-    auto cfg = M5.config();
-    M5.begin(cfg);
+    g_midi.setInstrument(0, 0, g_tone);
+    g_midi.setMasterVolume(g_volume);
 
-    g_canvas.createSprite(M5.Display.width(), M5.Display.height());
-    paint();
+    g_midi.setNoteOn(0, NOTE_A4, 127);
 }
 
-void loop()
+bool handle_touch()
 {
-    M5.update();
     int display_width = M5.Display.width();
     int display_height = M5.Display.height();
 
@@ -53,13 +53,12 @@ void loop()
     {
         if (M5.Touch.getCount() == 0)
             g_is_touched = false;
-        delay(LOOP_DELAY);
-        return;
+        return false;
     }
 
     g_is_touched = M5.Touch.getCount() != 0;
     if (!g_is_touched)
-        return;
+        return false;
 
     for (char i = 0; i < M5.Touch.getCount(); i++)
     {
@@ -92,6 +91,30 @@ void loop()
     if (128 <= g_volume && g_volume < 192)
         g_volume = 127;
 
+    return true;
+}
+
+void setup()
+{
+    auto cfg = M5.config();
+    M5.begin(cfg);
+
+    g_canvas.createSprite(M5.Display.width(), M5.Display.height());
+    g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
+
+    apply_values();
     paint();
+}
+
+void loop()
+{
+    M5.update();
+
+    if (handle_touch())
+    {
+        apply_values();
+        paint();
+    }
+
     delay(LOOP_DELAY);
 }
