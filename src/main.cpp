@@ -19,8 +19,8 @@ void paint()
     g_canvas.setCursor(0, 0);
     g_canvas.setTextSize(4);
     g_canvas.printf("tone: %i\n", g_tone + 1);
-    g_canvas.setCursor(0, TEXT_FACTOR * 4);
-    g_canvas.setTextSize(3);
+    g_canvas.setCursor(0, TEXT_FACTOR * 5);
+    g_canvas.setTextSize(2);
     g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
     g_canvas.drawFastHLine(0, TEXT_FACTOR * 7, width, TFT_WHITE);
 
