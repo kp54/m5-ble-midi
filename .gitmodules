@@ -1,0 +1,3 @@
+[submodule "lib/M5-SAM2695"]
+	path = lib/M5-SAM2695
+	url = https://github.com/m5stack/M5-SAM2695.git
