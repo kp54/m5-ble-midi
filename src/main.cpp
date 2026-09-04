@@ -1,20 +1,24 @@
 #include <M5Unified.h>
 #include <M5_SAM2695.h>
 #include <BLEMidi.h>
+#include <Preferences.h>
 
 extern const char *INSTRUMENT_NAMES[];
 const char TEXT_FACTOR = 8;
 const char LOOP_DELAY = 1;
 
+Preferences g_preferences;
+M5Canvas g_canvas;
+bool g_is_touched = false;
+
+M5_SAM2695 g_midi;
 unsigned char g_tone = 0;
 unsigned char g_volume = 63;
-bool g_is_touched = false;
+
 bool g_do_ble_scan = false;
 int g_ble_index = 0;
 int g_ble_prev_index = -1;
 int g_ble_devices = 0;
-M5Canvas g_canvas;
-M5_SAM2695 g_midi;
 
 void paint()
 {
@@ -64,6 +68,9 @@ void apply_values()
 {
     g_midi.setInstrument(0, 0, g_tone);
     g_midi.setMasterVolume(g_volume);
+
+    g_preferences.putUChar("g_tone", g_tone);
+    g_preferences.putUChar("g_volume", g_volume);
 }
 
 bool handle_touch()
@@ -175,6 +182,10 @@ void task_ble(void *_)
 
 void setup()
 {
+    g_preferences.begin("ble-midi", false);
+    g_tone = g_preferences.getUChar("g_tone", 0);
+    g_volume = g_preferences.getUChar("g_volume", 63);
+
     auto cfg = M5.config();
     M5.begin(cfg);
     Serial.begin(115200);
