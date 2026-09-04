@@ -11,6 +11,7 @@ unsigned char g_volume = 63;
 bool g_is_touched = false;
 bool g_do_ble_scan = false;
 int g_ble_index = 0;
+int g_ble_prev_index = -1;
 int g_ble_devices = 0;
 M5Canvas g_canvas;
 M5_SAM2695 g_midi;
@@ -37,7 +38,11 @@ void paint()
 
     g_canvas.setCursor(0, TEXT_FACTOR * 16);
     g_canvas.setTextSize(4);
-    if (g_ble_devices == 0)
+    if (g_do_ble_scan == true)
+    {
+        g_canvas.printf("device: scan\n");
+    }
+    else if (g_ble_devices == 0)
     {
         g_canvas.printf("device: n/a\n");
     }
@@ -59,10 +64,6 @@ void apply_values()
 {
     g_midi.setInstrument(0, 0, g_tone);
     g_midi.setMasterVolume(g_volume);
-    if (0 < g_ble_devices)
-    {
-        BLEMidiClient.connect(g_ble_index);
-    }
 }
 
 bool handle_touch()
@@ -125,16 +126,50 @@ bool handle_touch()
     return true;
 }
 
-void handle_ble()
+void handle_ble_scan()
 {
     if (!g_do_ble_scan)
         return;
-    g_do_ble_scan = false;
 
+    g_ble_devices = 0;
+    g_ble_prev_index = -1;
     g_ble_index = 0;
+
     g_ble_devices = BLEMidiClient.scan();
-    if (0 < g_ble_devices)
-        BLEMidiClient.connect(0);
+    g_ble_index = 0;
+    g_do_ble_scan = false;
+}
+
+void handle_ble_connect()
+{
+    if (g_ble_devices == 0 || g_ble_prev_index == g_ble_index)
+        return;
+
+    BLEMidiClient.connect(g_ble_index);
+    g_ble_prev_index = g_ble_index;
+}
+
+void loop()
+{
+    M5.update();
+
+    if (handle_touch())
+    {
+        apply_values();
+    }
+
+    paint();
+    delay(LOOP_DELAY);
+}
+
+void task_ble(void *_)
+{
+    while (true)
+    {
+        handle_ble_scan();
+        handle_ble_connect();
+        delay(1);
+    }
 }
 
 void setup()
@@ -147,9 +182,13 @@ void setup()
     g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
 
     BLEMidiClient.setNoteOnCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                    { Serial.printf("NoteOn: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp); });
+                                    {
+        Serial.printf("NoteOn: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp);
+        g_midi.setNoteOn(0, note, velocity); });
     BLEMidiClient.setNoteOffCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                     { Serial.printf("NoteOff: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp); });
+                                     {
+        Serial.printf("NoteOff: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp);
+        g_midi.setNoteOff(0, note, velocity); });
 
     BLEMidiClient.setOnConnectCallback([]()
                                        { Serial.printf("connected\r\n"); });
@@ -160,18 +199,5 @@ void setup()
 
     apply_values();
     paint();
-}
-
-void loop()
-{
-    M5.update();
-
-    if (handle_touch())
-    {
-        apply_values();
-        handle_ble();
-        paint();
-    }
-
-    delay(LOOP_DELAY);
+    xTaskCreatePinnedToCore(task_ble, "task_ble", 2048, NULL, 1, NULL, 1);
 }
