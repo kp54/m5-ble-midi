@@ -102,14 +102,12 @@ bool handle_touch()
                 g_volume++;
         }
 
-        if (TEXT_FACTOR * 16 <= touch.y && touch.y < TEXT_FACTOR * 24)
+        if (g_do_ble_scan == false && TEXT_FACTOR * 16 <= touch.y && touch.y < TEXT_FACTOR * 24)
         {
             if (0 <= touch.x && touch.x < 64)
                 g_do_ble_scan = true;
             if (display_width - 64 <= touch.x && touch.x < display_width)
                 g_ble_index++;
-            if (g_ble_devices <= g_ble_index)
-                g_ble_index = 0;
         }
     }
 
@@ -122,6 +120,9 @@ bool handle_touch()
         g_volume = 0;
     if (128 <= g_volume && g_volume < 192)
         g_volume = 127;
+
+    if (g_ble_devices <= g_ble_index)
+        g_ble_index = 0;
 
     return true;
 }
@@ -182,19 +183,9 @@ void setup()
     g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
 
     BLEMidiClient.setNoteOnCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                    {
-        Serial.printf("NoteOn: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp);
-        g_midi.setNoteOn(0, note, velocity); });
+                                    { g_midi.setNoteOn(0, note, velocity); });
     BLEMidiClient.setNoteOffCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                     {
-        Serial.printf("NoteOff: channel=%i note=%i velocity=%i timestamp=%i\r\n", channel, note, velocity, timestamp);
-        g_midi.setNoteOff(0, note, velocity); });
-
-    BLEMidiClient.setOnConnectCallback([]()
-                                       { Serial.printf("connected\r\n"); });
-    BLEMidiClient.setOnDisconnectCallback([]()
-                                          { Serial.printf("disconnected\r\n"); });
-
+                                     { g_midi.setNoteOff(0, note, velocity); });
     BLEMidiClient.begin("kp54");
 
     apply_values();
