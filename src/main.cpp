@@ -4,6 +4,8 @@
 #include <Preferences.h>
 
 extern const char *INSTRUMENT_NAMES[];
+extern void setup_ble_midi_callbacks();
+
 const char TEXT_FACTOR = 8;
 const char LOOP_DELAY = 1;
 
@@ -198,53 +200,6 @@ void task_ble(void *_)
     }
 }
 
-void setup_ble_midi_callback()
-{
-    BLEMidiClient.setOnConnectCallback([]()
-    {
-        Serial.printf("Connected name=%s mac=%x\r\n", BLEMidiClient.deviceName(g_ble_index), BLEMidiClient.deviceMacAddress(g_ble_index));
-    });
-    BLEMidiClient.setOnDisconnectCallback([]()
-    {
-        Serial.printf("Disconnected\r\n");
-    });
-
-    BLEMidiClient.setNoteOnCallback([](uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
-    {
-        g_midi.setNoteOn(channel, note, velocity);
-        Serial.printf("NoteOn channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
-    });
-    BLEMidiClient.setNoteOffCallback([](uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
-    {
-        g_midi.setNoteOff(channel, note, velocity);
-        Serial.printf("NoteOff channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
-    });
-
-    BLEMidiClient.setAfterTouchCallback([](uint8_t channel, uint8_t pressure, uint16_t timestamp)
-    {
-        Serial.printf("AfterTouch channel=%d pressure=%d timestamp=%d\r\n", channel, pressure, timestamp);
-    });
-    BLEMidiClient.setAfterTouchPolyCallback([](uint8_t channel, uint8_t note, uint8_t pressure, uint16_t timestamp)
-    {
-        Serial.printf("AfterTouchPoly channel=%d note=%d pressure=%d timestamp=%d\r\n", channel, note, pressure, timestamp);
-    });
-
-    BLEMidiClient.setPitchBendCallback([](uint8_t channel, uint16_t value, uint16_t timestamp)
-    {
-        g_midi.setPitchBend(channel, value);
-        Serial.printf("PitchBend channel=%d value=%d timestamp=%d\r\n", channel, value, timestamp);
-    });
-
-    BLEMidiClient.setControlChangeCallback([](uint8_t channel, uint8_t controller, uint8_t value, uint16_t timestamp)
-    {
-        Serial.printf("ControlChange channel=%d controller=%d value=%d timestamp=%d\r\n", channel, controller, value, timestamp);
-    });
-    BLEMidiClient.setProgramChangeCallback([](uint8_t channel, uint8_t program, uint16_t timestamp)
-    {
-        Serial.printf("ProgramChange channel=%d program=%d timestamp=%d\r\n", channel, program, timestamp);
-    });
-}
-
 void setup()
 {
     g_preferences.begin("ble-midi", false);
@@ -258,7 +213,7 @@ void setup()
     g_canvas.createSprite(M5.Display.width(), M5.Display.height());
     g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
 
-    setup_ble_midi_callback();
+    setup_ble_midi_callbacks();
     BLEMidiClient.begin("kp54");
 
     apply_values();
