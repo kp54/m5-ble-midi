@@ -47,7 +47,7 @@ void paint_ble(int width)
     g_canvas.setCursor(0, TEXT_FACTOR * 21);
     g_canvas.setTextSize(2);
 
-    if (g_ble_index == g_ble_conn_index)
+    if (BLEMidiClient.isConnected() && g_ble_index == g_ble_conn_index)
         g_canvas.printf("%s [conn]\n", BLEMidiClient.deviceName(g_ble_index));
     else
        g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
@@ -198,6 +198,53 @@ void task_ble(void *_)
     }
 }
 
+void setup_ble_midi_callback()
+{
+    BLEMidiClient.setOnConnectCallback([]()
+    {
+        Serial.printf("Connected name=%s mac=%x\r\n", BLEMidiClient.deviceName(g_ble_index), BLEMidiClient.deviceMacAddress(g_ble_index));
+    });
+    BLEMidiClient.setOnDisconnectCallback([]()
+    {
+        Serial.printf("Disconnected\r\n");
+    });
+
+    BLEMidiClient.setNoteOnCallback([](uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
+    {
+        g_midi.setNoteOn(channel, note, velocity);
+        Serial.printf("NoteOn channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
+    });
+    BLEMidiClient.setNoteOffCallback([](uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
+    {
+        g_midi.setNoteOff(channel, note, velocity);
+        Serial.printf("NoteOff channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
+    });
+
+    BLEMidiClient.setAfterTouchCallback([](uint8_t channel, uint8_t pressure, uint16_t timestamp)
+    {
+        Serial.printf("AfterTouch channel=%d pressure=%d timestamp=%d\r\n", channel, pressure, timestamp);
+    });
+    BLEMidiClient.setAfterTouchPolyCallback([](uint8_t channel, uint8_t note, uint8_t pressure, uint16_t timestamp)
+    {
+        Serial.printf("AfterTouchPoly channel=%d note=%d pressure=%d timestamp=%d\r\n", channel, note, pressure, timestamp);
+    });
+
+    BLEMidiClient.setPitchBendCallback([](uint8_t channel, uint16_t value, uint16_t timestamp)
+    {
+        g_midi.setPitchBend(channel, value);
+        Serial.printf("PitchBend channel=%d value=%d timestamp=%d\r\n", channel, value, timestamp);
+    });
+
+    BLEMidiClient.setControlChangeCallback([](uint8_t channel, uint8_t controller, uint8_t value, uint16_t timestamp)
+    {
+        Serial.printf("ControlChange channel=%d controller=%d value=%d timestamp=%d\r\n", channel, controller, value, timestamp);
+    });
+    BLEMidiClient.setProgramChangeCallback([](uint8_t channel, uint8_t program, uint16_t timestamp)
+    {
+        Serial.printf("ProgramChange channel=%d program=%d timestamp=%d\r\n", channel, program, timestamp);
+    });
+}
+
 void setup()
 {
     g_preferences.begin("ble-midi", false);
@@ -211,10 +258,7 @@ void setup()
     g_canvas.createSprite(M5.Display.width(), M5.Display.height());
     g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
 
-    BLEMidiClient.setNoteOnCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                    { g_midi.setNoteOn(0, note, velocity); });
-    BLEMidiClient.setNoteOffCallback([](u8_t channel, u8_t note, u8_t velocity, u16_t timestamp)
-                                     { g_midi.setNoteOff(0, note, velocity); });
+    setup_ble_midi_callback();
     BLEMidiClient.begin("kp54");
 
     apply_values();
