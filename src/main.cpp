@@ -15,10 +15,43 @@ M5_SAM2695 g_midi;
 unsigned char g_tone = 0;
 unsigned char g_volume = 63;
 
-bool g_do_ble_scan = false;
+bool g_ble_do_scan = false;
+bool g_ble_do_connect = false;
 int g_ble_index = 0;
-int g_ble_prev_index = -1;
+int g_ble_conn_index = -1;
 int g_ble_devices = 0;
+
+void paint_ble(int width)
+{
+    g_canvas.drawFastHLine(0, TEXT_FACTOR * 23, width, TFT_WHITE);
+    g_canvas.setCursor(0, TEXT_FACTOR * 16);
+    g_canvas.setTextSize(4);
+
+    if (g_ble_do_scan == true)
+    {
+        g_canvas.printf("device: scan\n");
+        return;
+    }
+
+    if (g_ble_devices == 0)
+    {
+        g_canvas.printf("device: n/a\n");
+        return;
+    }
+
+    if (g_ble_do_connect == true)
+        g_canvas.printf("device: conn\n");
+    else
+        g_canvas.printf("device: %i/%i\n", g_ble_index + 1, g_ble_devices);
+
+    g_canvas.setCursor(0, TEXT_FACTOR * 21);
+    g_canvas.setTextSize(2);
+
+    if (g_ble_index == g_ble_conn_index)
+        g_canvas.printf("%s [conn]\n", BLEMidiClient.deviceName(g_ble_index));
+    else
+       g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
+}
 
 void paint()
 {
@@ -40,24 +73,7 @@ void paint()
     g_canvas.printf("volume: %i\n", g_volume);
     g_canvas.drawFastHLine(0, TEXT_FACTOR * 15, width, TFT_WHITE);
 
-    g_canvas.setCursor(0, TEXT_FACTOR * 16);
-    g_canvas.setTextSize(4);
-    if (g_do_ble_scan == true)
-    {
-        g_canvas.printf("device: scan\n");
-    }
-    else if (g_ble_devices == 0)
-    {
-        g_canvas.printf("device: n/a\n");
-    }
-    else
-    {
-        g_canvas.printf("device: %i/%i\n", g_ble_index + 1, g_ble_devices);
-        g_canvas.setCursor(0, TEXT_FACTOR * 21);
-        g_canvas.setTextSize(2);
-        g_canvas.println(BLEMidiClient.deviceName(g_ble_index));
-    }
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 23, width, TFT_WHITE);
+    paint_ble(width);
 
     M5.Display.startWrite();
     g_canvas.pushSprite(&M5.Display, 0, 0);
@@ -109,10 +125,12 @@ bool handle_touch()
                 g_volume++;
         }
 
-        if (g_do_ble_scan == false && TEXT_FACTOR * 16 <= touch.y && touch.y < TEXT_FACTOR * 24)
+        if (g_ble_do_scan == false && g_ble_do_connect == false && TEXT_FACTOR * 16 <= touch.y && touch.y < TEXT_FACTOR * 24)
         {
             if (0 <= touch.x && touch.x < 64)
-                g_do_ble_scan = true;
+                g_ble_do_scan = true;
+            if (64 <= touch.x && touch.x < display_width - 64)
+                g_ble_do_connect = true;
             if (display_width - 64 <= touch.x && touch.x < display_width)
                 g_ble_index++;
         }
@@ -136,25 +154,25 @@ bool handle_touch()
 
 void handle_ble_scan()
 {
-    if (!g_do_ble_scan)
+    if (!g_ble_do_scan)
         return;
 
     g_ble_devices = 0;
-    g_ble_prev_index = -1;
     g_ble_index = 0;
+    g_ble_conn_index = -1;
 
     g_ble_devices = BLEMidiClient.scan();
-    g_ble_index = 0;
-    g_do_ble_scan = false;
+    g_ble_do_scan = false;
 }
 
 void handle_ble_connect()
 {
-    if (g_ble_devices == 0 || g_ble_prev_index == g_ble_index)
+    if (g_ble_devices == 0 || g_ble_do_connect == false)
         return;
 
     BLEMidiClient.connect(g_ble_index);
-    g_ble_prev_index = g_ble_index;
+    g_ble_conn_index = g_ble_index;
+    g_ble_do_connect = false;
 }
 
 void loop()
