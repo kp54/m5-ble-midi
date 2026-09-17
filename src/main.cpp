@@ -60,10 +60,10 @@ void paint_bat(int width)
     g_canvas.setCursor(width - 36, 0);
     g_canvas.setTextSize(2);
 
-    auto is_charging = M5.Power.isCharging();
-    if (is_charging == M5.Power.is_charging)
+    int charge_status = M5.Power.Axp2101.getChargeStatus();
+    if (charge_status == 1)
         g_canvas.setTextColor(TFT_GREEN);
-    if (is_charging == M5.Power.is_discharging)
+    if (charge_status == -1)
         g_canvas.setTextColor(TFT_RED);
 
     g_canvas.printf("%03d", M5.Power.getBatteryLevel());
