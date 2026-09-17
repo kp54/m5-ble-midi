@@ -44,6 +44,13 @@ void onPitchBend(uint8_t channel, uint16_t value, uint16_t timestamp)
 
 void onControlChange(uint8_t channel, uint8_t controller, uint8_t value, uint16_t timestamp)
 {
+    switch (controller)
+    {
+        case 11:
+            g_midi.setExpression(channel, value);
+            break;
+    }
+
     Serial.printf("ControlChange channel=%d controller=%d value=%d timestamp=%d\r\n", channel, controller, value, timestamp);
 }
 
