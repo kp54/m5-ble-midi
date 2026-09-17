@@ -55,12 +55,29 @@ void paint_ble(int width)
        g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
 }
 
+void paint_bat(int width)
+{
+    g_canvas.setCursor(width - 36, 0);
+    g_canvas.setTextSize(2);
+
+    auto is_charging = M5.Power.isCharging();
+    if (is_charging == M5.Power.is_charging)
+        g_canvas.setTextColor(TFT_GREEN);
+    if (is_charging == M5.Power.is_discharging)
+        g_canvas.setTextColor(TFT_RED);
+
+    g_canvas.printf("%03d", M5.Power.getBatteryLevel());
+
+    g_canvas.setTextColor(TFT_WHITE);
+}
+
 void paint()
 {
     int width = g_canvas.width();
     int height = g_canvas.height();
 
     g_canvas.clearDisplay(TFT_BLACK);
+    g_canvas.setTextColor(TFT_WHITE);
 
     g_canvas.setCursor(0, 0);
     g_canvas.setTextSize(4);
@@ -76,6 +93,8 @@ void paint()
     g_canvas.drawFastHLine(0, TEXT_FACTOR * 15, width, TFT_WHITE);
 
     paint_ble(width);
+
+    paint_bat(width);
 
     M5.Display.startWrite();
     g_canvas.pushSprite(&M5.Display, 0, 0);
@@ -208,6 +227,7 @@ void setup()
 
     auto cfg = M5.config();
     M5.begin(cfg);
+    M5.Power.begin();
     Serial.begin(115200);
 
     g_canvas.createSprite(M5.Display.width(), M5.Display.height());
