@@ -7,10 +7,12 @@ extern const char *INSTRUMENT_NAMES[];
 extern void setup_ble_midi_callbacks();
 
 const char TEXT_FACTOR = 8;
-const char LOOP_DELAY = 1;
+const unsigned short ACTIVE_TICKS = 30;
+const char LOOP_DELAY_MS = 1;
 
 Preferences g_preferences;
 M5Canvas g_canvas;
+unsigned short g_active_ticks = 0;
 bool g_is_touched = false;
 
 M5_SAM2695 g_midi;
@@ -23,9 +25,9 @@ int g_ble_index = 0;
 int g_ble_conn_index = -1;
 int g_ble_devices = 0;
 
-void paint_ble(int width)
+void paint_ble(int width, int fg_color)
 {
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 23, width, TFT_WHITE);
+    g_canvas.drawFastHLine(0, TEXT_FACTOR * 23, width, fg_color);
     g_canvas.setCursor(0, TEXT_FACTOR * 16);
     g_canvas.setTextSize(4);
 
@@ -55,7 +57,7 @@ void paint_ble(int width)
        g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
 }
 
-void paint_bat(int width)
+void paint_bat(int width, int fg_color)
 {
     g_canvas.setCursor(width - 36, 0);
     g_canvas.setTextSize(2);
@@ -68,16 +70,17 @@ void paint_bat(int width)
 
     g_canvas.printf("%03d", M5.Power.getBatteryLevel());
 
-    g_canvas.setTextColor(TFT_WHITE);
+    g_canvas.setTextColor(fg_color);
 }
 
 void paint()
 {
     int width = g_canvas.width();
     int height = g_canvas.height();
+    int fg_color = 0 < g_active_ticks ? TFT_GREEN : TFT_WHITE;
 
     g_canvas.clearDisplay(TFT_BLACK);
-    g_canvas.setTextColor(TFT_WHITE);
+    g_canvas.setTextColor(fg_color);
 
     g_canvas.setCursor(0, 0);
     g_canvas.setTextSize(4);
@@ -85,16 +88,16 @@ void paint()
     g_canvas.setCursor(0, TEXT_FACTOR * 5);
     g_canvas.setTextSize(2);
     g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 7, width, TFT_WHITE);
+    g_canvas.drawFastHLine(0, TEXT_FACTOR * 7, width, fg_color);
 
     g_canvas.setCursor(0, TEXT_FACTOR * 8);
     g_canvas.setTextSize(4);
     g_canvas.printf("volume: %i\n", g_volume);
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 15, width, TFT_WHITE);
+    g_canvas.drawFastHLine(0, TEXT_FACTOR * 15, width, fg_color);
 
-    paint_ble(width);
+    paint_ble(width, fg_color);
 
-    paint_bat(width);
+    paint_bat(width, fg_color);
 
     M5.Display.startWrite();
     g_canvas.pushSprite(&M5.Display, 0, 0);
@@ -105,9 +108,6 @@ void apply_values()
 {
     g_midi.setInstrument(0, 0, g_tone);
     g_midi.setMasterVolume(g_volume);
-
-    g_preferences.putUChar("g_tone", g_tone);
-    g_preferences.putUChar("g_volume", g_volume);
 }
 
 bool handle_touch()
@@ -173,6 +173,17 @@ bool handle_touch()
     return true;
 }
 
+bool handle_save()
+{
+    if (!M5.BtnPWR.wasClicked())
+        return false;
+
+    g_preferences.putUChar("g_tone", g_tone);
+    g_preferences.putUChar("g_volume", g_volume);
+
+    return true;
+}
+
 void handle_ble_scan()
 {
     if (!g_ble_do_scan)
@@ -201,12 +212,17 @@ void loop()
     M5.update();
 
     if (handle_touch())
-    {
         apply_values();
-    }
+
+    if (handle_save())
+        g_active_ticks = ACTIVE_TICKS;
 
     paint();
-    delay(LOOP_DELAY);
+
+    if (0 < g_active_ticks)
+        g_active_ticks--;
+
+    delay(LOOP_DELAY_MS);
 }
 
 void task_ble(void *_)
