@@ -6,13 +6,17 @@
 extern const char *INSTRUMENT_NAMES[];
 extern void setup_ble_midi_callbacks();
 
-const char TEXT_FACTOR = 8;
-const unsigned short ACTIVE_TICKS = 30;
-const char LOOP_DELAY_MS = 1;
+const unsigned short DISPLAY_WIDTH = 320;
+const unsigned short DISPLAY_HEIGHT = 240;
+const unsigned short SLOT_HEIGHT = 64;
+const unsigned short TEXT_FACTOR = 8;
+
+const unsigned char ACTIVE_TICKS = 30;
+const unsigned char LOOP_DELAY_MS = 1;
 
 Preferences g_preferences;
 M5Canvas g_canvas;
-unsigned short g_active_ticks = 0;
+unsigned char g_active_ticks = 0;
 bool g_is_touched = false;
 
 M5_SAM2695 g_midi;
@@ -26,10 +30,19 @@ int g_ble_conn_index = -1;
 int g_ble_devices = 0;
 char g_ble_last_device[18] = "\0";
 
-void paint_ble(int width, int fg_color)
+#define SLOT_TOP(s) (SLOT_HEIGHT * s)
+#define SLOT_BOTTOM(s) (SLOT_HEIGHT * s + TEXT_FACTOR * 7)
+#define SLOT_TEXT(s, i) (SLOT_HEIGHT * s + TEXT_FACTOR * i)
+
+#define IS_IN_SLOT(s, y) (SLOT_TOP(s) <= y && y < SLOT_BOTTOM(s))
+#define IS_IN_LEFT(x) (0 <= x && x < 64)
+#define IS_IN_CENTER(x) (64 <= x && x < DISPLAY_WIDTH - 64)
+#define IS_IN_RIGHT(x) (DISPLAY_WIDTH - 64 <= x && x < DISPLAY_WIDTH)
+
+void paint_ble(int fg_color)
 {
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 23, width, fg_color);
-    g_canvas.setCursor(0, TEXT_FACTOR * 16);
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(2), DISPLAY_WIDTH, fg_color);
+    g_canvas.setCursor(0, SLOT_TOP(2));
     g_canvas.setTextSize(4);
 
     if (g_ble_do_scan == true)
@@ -49,7 +62,7 @@ void paint_ble(int width, int fg_color)
     else
         g_canvas.printf("device: %i/%i\n", g_ble_index + 1, g_ble_devices);
 
-    g_canvas.setCursor(0, TEXT_FACTOR * 21);
+    g_canvas.setCursor(0, SLOT_TEXT(2, 5));
     g_canvas.setTextSize(2);
 
     if (BLEMidiClient.isConnected() && g_ble_index == g_ble_conn_index)
@@ -58,9 +71,9 @@ void paint_ble(int width, int fg_color)
         g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
 }
 
-void paint_bat(int width, int fg_color)
+void paint_bat(int fg_color)
 {
-    g_canvas.setCursor(width - 36, 0);
+    g_canvas.setCursor(DISPLAY_WIDTH - 36, 0);
     g_canvas.setTextSize(2);
 
     int charge_status = M5.Power.Axp2101.getChargeStatus();
@@ -76,29 +89,27 @@ void paint_bat(int width, int fg_color)
 
 void paint()
 {
-    int width = g_canvas.width();
-    int height = g_canvas.height();
     int fg_color = 0 < g_active_ticks ? TFT_GREEN : TFT_WHITE;
 
     g_canvas.clearDisplay(TFT_BLACK);
     g_canvas.setTextColor(fg_color);
 
-    g_canvas.setCursor(0, 0);
+    g_canvas.setCursor(0, SLOT_TOP(0));
     g_canvas.setTextSize(4);
     g_canvas.printf("tone: %i\n", g_tone + 1);
-    g_canvas.setCursor(0, TEXT_FACTOR * 5);
+    g_canvas.setCursor(0, SLOT_TEXT(0, 5));
     g_canvas.setTextSize(2);
     g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 7, width, fg_color);
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(0), DISPLAY_WIDTH, fg_color);
 
-    g_canvas.setCursor(0, TEXT_FACTOR * 8);
+    g_canvas.setCursor(0, SLOT_TOP(1));
     g_canvas.setTextSize(4);
     g_canvas.printf("volume: %i\n", g_volume);
-    g_canvas.drawFastHLine(0, TEXT_FACTOR * 15, width, fg_color);
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(1), DISPLAY_WIDTH, fg_color);
 
-    paint_ble(width, fg_color);
+    paint_ble(fg_color);
 
-    paint_bat(width, fg_color);
+    paint_bat(fg_color);
 
     M5.Display.startWrite();
     g_canvas.pushSprite(&M5.Display, 0, 0);
@@ -113,9 +124,6 @@ void apply_values()
 
 bool handle_touch()
 {
-    int display_width = M5.Display.width();
-    int display_height = M5.Display.height();
-
     if (g_is_touched)
     {
         if (M5.Touch.getCount() == 0)
@@ -131,29 +139,32 @@ bool handle_touch()
     {
         auto touch = M5.Touch.getDetail(i);
 
-        if (0 <= touch.y && touch.y < TEXT_FACTOR * 8)
+        if (IS_IN_SLOT(0, touch.y))
         {
-            if (0 <= touch.x && touch.x < 64)
+            if (IS_IN_LEFT(touch.x))
                 g_tone--;
-            if (display_width - 64 <= touch.x && touch.x < display_width)
+            if (IS_IN_RIGHT(touch.x))
                 g_tone++;
         }
 
-        if (TEXT_FACTOR * 8 <= touch.y && touch.y < TEXT_FACTOR * 16)
+        if (IS_IN_SLOT(1, touch.y))
         {
-            if (0 <= touch.x && touch.x < 64)
+            if (IS_IN_LEFT(touch.x))
                 g_volume--;
-            if (display_width - 64 <= touch.x && touch.x < display_width)
+            if (IS_IN_RIGHT(touch.x))
                 g_volume++;
         }
 
-        if (g_ble_do_scan == false && g_ble_do_connect == false && TEXT_FACTOR * 16 <= touch.y && touch.y < TEXT_FACTOR * 24)
+        if (
+            g_ble_do_scan == false && g_ble_do_connect == false &&
+            IS_IN_SLOT(2, touch.y)
+        )
         {
-            if (0 <= touch.x && touch.x < 64)
+            if (IS_IN_LEFT(touch.x))
                 g_ble_do_scan = true;
-            if (64 <= touch.x && touch.x < display_width - 64)
+            if (IS_IN_CENTER(touch.x))
                 g_ble_do_connect = true;
-            if (display_width - 64 <= touch.x && touch.x < display_width)
+            if (IS_IN_RIGHT(touch.x))
                 g_ble_index++;
         }
     }
@@ -264,7 +275,7 @@ void setup()
     M5.Power.begin();
     Serial.begin(115200);
 
-    g_canvas.createSprite(M5.Display.width(), M5.Display.height());
+    g_canvas.createSprite(DISPLAY_WIDTH, DISPLAY_HEIGHT);
     g_midi.begin(&Serial2, MIDI_BAUD, 16, 17);
 
     setup_ble_midi_callbacks();
