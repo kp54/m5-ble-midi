@@ -3,6 +3,7 @@
 
 extern int g_ble_index;
 extern M5_SAM2695 g_midi;
+extern signed char g_transpose;
 
 void onConnect()
 {
@@ -16,13 +17,19 @@ void onDisconnect()
 
 void onNoteOn(uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
 {
-    g_midi.setNoteOn(channel, note, velocity);
+    uint8_t transposed = note + g_transpose;
+    if (0 < transposed)
+        g_midi.setNoteOn(channel, transposed, velocity);
+
     Serial.printf("NoteOn channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
 }
 
 void onNoteOff(uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
 {
-    g_midi.setNoteOff(channel, note, velocity);
+    uint8_t transposed = note + g_transpose;
+    if (0 < transposed)
+        g_midi.setNoteOff(channel, transposed, velocity);
+
     Serial.printf("NoteOff channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
 }
 

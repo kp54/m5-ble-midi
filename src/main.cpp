@@ -21,6 +21,7 @@ bool g_is_touched = false;
 
 M5_SAM2695 g_midi;
 unsigned char g_tone = 0;
+signed char g_transpose = 0;
 unsigned char g_volume = 63;
 
 bool g_ble_do_scan = false;
@@ -41,8 +42,8 @@ char g_ble_last_device[18] = "\0";
 
 void paint_ble(int fg_color)
 {
-    g_canvas.drawFastHLine(0, SLOT_BOTTOM(2), DISPLAY_WIDTH, fg_color);
-    g_canvas.setCursor(0, SLOT_TEXT(2, 0));
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(3), DISPLAY_WIDTH, fg_color);
+    g_canvas.setCursor(0, SLOT_TEXT(3, 0));
     g_canvas.setTextSize(4);
 
     if (g_ble_do_scan == true)
@@ -62,7 +63,7 @@ void paint_ble(int fg_color)
     else
         g_canvas.printf("device: %i/%i\n", g_ble_index + 1, g_ble_devices);
 
-    g_canvas.setCursor(0, SLOT_TEXT(2, 5));
+    g_canvas.setCursor(0, SLOT_TEXT(3, 5));
     g_canvas.setTextSize(2);
 
     if (BLEMidiClient.isConnected() && g_ble_index == g_ble_conn_index)
@@ -104,8 +105,13 @@ void paint()
 
     g_canvas.setCursor(0, SLOT_TEXT(1, 0));
     g_canvas.setTextSize(4);
-    g_canvas.printf("volume: %i\n", g_volume);
+    g_canvas.printf("transp: %d\n", g_transpose);
     g_canvas.drawFastHLine(0, SLOT_BOTTOM(1), DISPLAY_WIDTH, fg_color);
+
+    g_canvas.setCursor(0, SLOT_TEXT(2, 0));
+    g_canvas.setTextSize(4);
+    g_canvas.printf("volume: %i\n", g_volume);
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(2), DISPLAY_WIDTH, fg_color);
 
     paint_ble(fg_color);
 
@@ -150,12 +156,20 @@ bool handle_touch()
         if (IS_IN_SLOT(1, touch.y))
         {
             if (IS_IN_LEFT(touch.x))
+                g_transpose--;
+            if (IS_IN_RIGHT(touch.x))
+                g_transpose++;
+        }
+
+        if (IS_IN_SLOT(2, touch.y))
+        {
+            if (IS_IN_LEFT(touch.x))
                 g_volume--;
             if (IS_IN_RIGHT(touch.x))
                 g_volume++;
         }
 
-        if (IS_IN_SLOT(2, touch.y) && g_ble_do_scan == false && g_ble_do_connect == false)
+        if (IS_IN_SLOT(3, touch.y) && g_ble_do_scan == false && g_ble_do_connect == false)
         {
             if (IS_IN_LEFT(touch.x))
                 g_ble_do_scan = true;
@@ -170,6 +184,11 @@ bool handle_touch()
         g_tone = 127;
     if (128 <= g_tone && g_tone < 192)
         g_tone = 0;
+
+    if (g_transpose < -12)
+        g_transpose = -12;
+    if (12 < g_transpose)
+        g_transpose = 12;
 
     if (192 <= g_volume && g_volume < 256)
         g_volume = 0;
@@ -188,6 +207,7 @@ bool handle_save()
         return false;
 
     g_preferences.putUChar("g_tone", g_tone);
+    g_preferences.putChar("g_transpose", g_transpose);
     g_preferences.putUChar("g_volume", g_volume);
     g_preferences.putString("g_ble_last_dev", g_ble_last_device);
 
@@ -264,6 +284,7 @@ void setup()
 {
     g_preferences.begin("ble-midi", false);
     g_tone = g_preferences.getUChar("g_tone", 0);
+    g_transpose = g_preferences.getChar("g_transpose", 0);
     g_volume = g_preferences.getUChar("g_volume", 63);
     g_preferences.getString("g_ble_last_dev", g_ble_last_device, 18);
 
