@@ -24,6 +24,7 @@ bool g_ble_do_connect = false;
 int g_ble_index = 0;
 int g_ble_conn_index = -1;
 int g_ble_devices = 0;
+char g_ble_last_device[18] = "\0";
 
 void paint_ble(int width, int fg_color)
 {
@@ -54,7 +55,7 @@ void paint_ble(int width, int fg_color)
     if (BLEMidiClient.isConnected() && g_ble_index == g_ble_conn_index)
         g_canvas.printf("%s [conn]\n", BLEMidiClient.deviceName(g_ble_index));
     else
-       g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
+        g_canvas.printf("%s\n", BLEMidiClient.deviceName(g_ble_index));
 }
 
 void paint_bat(int width, int fg_color)
@@ -180,6 +181,7 @@ bool handle_save()
 
     g_preferences.putUChar("g_tone", g_tone);
     g_preferences.putUChar("g_volume", g_volume);
+    g_preferences.putString("g_ble_last_dev", g_ble_last_device);
 
     return true;
 }
@@ -194,6 +196,20 @@ void handle_ble_scan()
     g_ble_conn_index = -1;
 
     g_ble_devices = BLEMidiClient.scan();
+
+    for (int i = 0; i < g_ble_devices; i++)
+    {
+        auto mac = BLEMidiClient.deviceMacAddress(i).c_str();
+
+        if (strcmp(g_ble_last_device, mac) == 0)
+        {
+            g_ble_index = i;
+            g_ble_conn_index = i;
+            BLEMidiClient.connect(i);
+            break;
+        }
+    }
+
     g_ble_do_scan = false;
 }
 
@@ -204,6 +220,7 @@ void handle_ble_connect()
 
     BLEMidiClient.connect(g_ble_index);
     g_ble_conn_index = g_ble_index;
+    strcpy(g_ble_last_device, BLEMidiClient.deviceMacAddress(g_ble_index).c_str());
     g_ble_do_connect = false;
 }
 
@@ -240,6 +257,7 @@ void setup()
     g_preferences.begin("ble-midi", false);
     g_tone = g_preferences.getUChar("g_tone", 0);
     g_volume = g_preferences.getUChar("g_volume", 63);
+    g_preferences.getString("g_ble_last_dev", g_ble_last_device, 18);
 
     auto cfg = M5.config();
     M5.begin(cfg);
