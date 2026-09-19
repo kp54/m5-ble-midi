@@ -8,7 +8,7 @@ extern void setup_ble_midi_callbacks();
 
 const unsigned short DISPLAY_WIDTH = 320;
 const unsigned short DISPLAY_HEIGHT = 240;
-const unsigned short SLOT_HEIGHT = 64;
+const unsigned short SLOT_HEIGHT = 60;
 const unsigned short TEXT_FACTOR = 8;
 
 const unsigned char ACTIVE_TICKS = 30;
@@ -30,19 +30,19 @@ int g_ble_conn_index = -1;
 int g_ble_devices = 0;
 char g_ble_last_device[18] = "\0";
 
-#define SLOT_TOP(s) (SLOT_HEIGHT * s)
-#define SLOT_BOTTOM(s) (SLOT_HEIGHT * s + TEXT_FACTOR * 7)
-#define SLOT_TEXT(s, i) (SLOT_HEIGHT * s + TEXT_FACTOR * i)
+#define SLOT_TOP(s) (SLOT_HEIGHT * (s))
+#define SLOT_BOTTOM(s) (SLOT_HEIGHT * ((s) + 1) - 1)
+#define SLOT_TEXT(s, i) (SLOT_HEIGHT * (s) + TEXT_FACTOR * (i) + TEXT_FACTOR / 2)
 
-#define IS_IN_SLOT(s, y) (SLOT_TOP(s) <= y && y < SLOT_BOTTOM(s))
-#define IS_IN_LEFT(x) (0 <= x && x < 64)
-#define IS_IN_CENTER(x) (64 <= x && x < DISPLAY_WIDTH - 64)
-#define IS_IN_RIGHT(x) (DISPLAY_WIDTH - 64 <= x && x < DISPLAY_WIDTH)
+#define IS_IN_SLOT(s, y) (SLOT_TOP((s)) <= (y) && (y) < SLOT_TOP((s) + 1))
+#define IS_IN_LEFT(x) (0 <= (x) && (x) < 64)
+#define IS_IN_CENTER(x) (64 <= (x) && (x) < DISPLAY_WIDTH - 64)
+#define IS_IN_RIGHT(x) (DISPLAY_WIDTH - 64 <= (x) && (x) < DISPLAY_WIDTH)
 
 void paint_ble(int fg_color)
 {
     g_canvas.drawFastHLine(0, SLOT_BOTTOM(2), DISPLAY_WIDTH, fg_color);
-    g_canvas.setCursor(0, SLOT_TOP(2));
+    g_canvas.setCursor(0, SLOT_TEXT(2, 0));
     g_canvas.setTextSize(4);
 
     if (g_ble_do_scan == true)
@@ -94,7 +94,7 @@ void paint()
     g_canvas.clearDisplay(TFT_BLACK);
     g_canvas.setTextColor(fg_color);
 
-    g_canvas.setCursor(0, SLOT_TOP(0));
+    g_canvas.setCursor(0, SLOT_TEXT(0, 0));
     g_canvas.setTextSize(4);
     g_canvas.printf("tone: %i\n", g_tone + 1);
     g_canvas.setCursor(0, SLOT_TEXT(0, 5));
@@ -102,7 +102,7 @@ void paint()
     g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
     g_canvas.drawFastHLine(0, SLOT_BOTTOM(0), DISPLAY_WIDTH, fg_color);
 
-    g_canvas.setCursor(0, SLOT_TOP(1));
+    g_canvas.setCursor(0, SLOT_TEXT(1, 0));
     g_canvas.setTextSize(4);
     g_canvas.printf("volume: %i\n", g_volume);
     g_canvas.drawFastHLine(0, SLOT_BOTTOM(1), DISPLAY_WIDTH, fg_color);
@@ -155,10 +155,7 @@ bool handle_touch()
                 g_volume++;
         }
 
-        if (
-            g_ble_do_scan == false && g_ble_do_connect == false &&
-            IS_IN_SLOT(2, touch.y)
-        )
+        if (IS_IN_SLOT(2, touch.y) && g_ble_do_scan == false && g_ble_do_connect == false)
         {
             if (IS_IN_LEFT(touch.x))
                 g_ble_do_scan = true;
