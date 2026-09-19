@@ -7,7 +7,7 @@ extern signed char g_transpose;
 
 void onConnect()
 {
-    Serial.printf("Connected name=%s mac=%x\r\n", BLEMidiClient.deviceName(g_ble_index), BLEMidiClient.deviceMacAddress(g_ble_index));
+    Serial.printf("Connected name=%s mac=%s\r\n", BLEMidiClient.deviceName(g_ble_index), BLEMidiClient.deviceMacAddress(g_ble_index).c_str());
 }
 
 void onDisconnect()
