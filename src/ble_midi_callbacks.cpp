@@ -18,7 +18,7 @@ void onDisconnect()
 void onNoteOn(uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
 {
     uint8_t transposed = note + g_transpose;
-    if (0 < transposed)
+    if (transposed < 128)
         g_midi.setNoteOn(channel, transposed, velocity);
 
     Serial.printf("NoteOn channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
@@ -27,7 +27,7 @@ void onNoteOn(uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestam
 void onNoteOff(uint8_t channel, uint8_t note, uint8_t velocity, uint16_t timestamp)
 {
     uint8_t transposed = note + g_transpose;
-    if (0 < transposed)
+    if (transposed < 128)
         g_midi.setNoteOff(channel, transposed, velocity);
 
     Serial.printf("NoteOff channel=%d note=%d velocity=%d timestamp=%d\r\n", channel, note, velocity, timestamp);
