@@ -6,32 +6,32 @@
 extern const char *INSTRUMENT_NAMES[];
 extern void setup_ble_midi_callbacks();
 
-const unsigned short DISPLAY_WIDTH = 320;
-const unsigned short DISPLAY_HEIGHT = 240;
-const unsigned short SLOT_HEIGHT = 60;
-const unsigned short TEXT_FACTOR = 8;
+const uint16_t DISPLAY_WIDTH = 320;
+const uint16_t DISPLAY_HEIGHT = 240;
+const uint16_t SLOT_HEIGHT = 60;
+const uint16_t TEXT_FACTOR = 8;
 
-const unsigned char ACTIVE_TICKS = 30;
-const unsigned char HOLD_TICKS = 20;
-const unsigned char LOOP_DELAY_MS = 1;
+const uint8_t ACTIVE_TICKS = 30;
+const uint8_t HOLD_TICKS = 20;
+const uint8_t LOOP_DELAY_MS = 1;
 
-const unsigned char TRANSPOSE_LIMIT = 24;
+const uint8_t TRANSPOSE_LIMIT = 24;
 
 Preferences g_preferences;
 M5Canvas g_canvas;
-unsigned char g_active_ticks = 0;
-unsigned char g_hold_ticks = 0;
+uint8_t g_active_ticks = 0;
+uint8_t g_hold_ticks = 0;
 
 M5_SAM2695 g_midi;
-unsigned char g_tone = 0;
-signed char g_transpose = 0;
-unsigned char g_volume = 63;
+uint8_t g_tone = 0;
+int8_t g_transpose = 0;
+uint8_t g_volume = 63;
 
 bool g_ble_do_scan = false;
 bool g_ble_do_connect = false;
-int g_ble_index = 0;
-int g_ble_conn_index = -1;
-int g_ble_devices = 0;
+uint32_t g_ble_index = 0;
+uint32_t g_ble_conn_index = -1;
+uint32_t g_ble_devices = 0;
 char g_ble_last_device[18] = "\0";
 
 #define SLOT_TOP(s) (SLOT_HEIGHT * (s))
@@ -150,7 +150,7 @@ bool handle_touch()
     if (g_hold_ticks == 0)
         g_hold_ticks = 1;
 
-    for (char i = 0; i < touches; i++)
+    for (int i = 0; i < touches; i++)
     {
         auto touch = M5.Touch.getDetail(i);
 

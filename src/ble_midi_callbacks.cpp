@@ -1,9 +1,9 @@
 #include <M5_SAM2695.h>
 #include <BLEMidi.h>
 
-extern int g_ble_index;
+extern uint32_t g_ble_index;
 extern M5_SAM2695 g_midi;
-extern signed char g_transpose;
+extern int8_t g_transpose;
 
 void onConnect()
 {
