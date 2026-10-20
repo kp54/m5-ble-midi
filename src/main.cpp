@@ -12,12 +12,13 @@ const unsigned short SLOT_HEIGHT = 60;
 const unsigned short TEXT_FACTOR = 8;
 
 const unsigned char ACTIVE_TICKS = 30;
+const unsigned char HOLD_TICKS = 20;
 const unsigned char LOOP_DELAY_MS = 1;
 
 Preferences g_preferences;
 M5Canvas g_canvas;
 unsigned char g_active_ticks = 0;
-bool g_is_touched = false;
+unsigned char g_hold_ticks = 0;
 
 M5_SAM2695 g_midi;
 unsigned char g_tone = 0;
@@ -130,18 +131,24 @@ void apply_values()
 
 bool handle_touch()
 {
-    if (g_is_touched)
+    int touches = M5.Touch.getCount();
+
+    if (touches == 0)
     {
-        if (M5.Touch.getCount() == 0)
-            g_is_touched = false;
+        g_hold_ticks = 0;
         return false;
     }
 
-    g_is_touched = M5.Touch.getCount() != 0;
-    if (!g_is_touched)
+    if (g_hold_ticks != 0 && g_hold_ticks != HOLD_TICKS)
+    {
+        g_hold_ticks += 1;
         return false;
+    }
 
-    for (char i = 0; i < M5.Touch.getCount(); i++)
+    if (g_hold_ticks == 0)
+        g_hold_ticks = 1;
+
+    for (char i = 0; i < touches; i++)
     {
         auto touch = M5.Touch.getDetail(i);
 
