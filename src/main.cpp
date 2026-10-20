@@ -15,6 +15,8 @@ const unsigned char ACTIVE_TICKS = 30;
 const unsigned char HOLD_TICKS = 20;
 const unsigned char LOOP_DELAY_MS = 1;
 
+const unsigned char TRANSPOSE_LIMIT = 24;
+
 Preferences g_preferences;
 M5Canvas g_canvas;
 unsigned char g_active_ticks = 0;
@@ -192,10 +194,10 @@ bool handle_touch()
     if (128 <= g_tone && g_tone < 192)
         g_tone = 0;
 
-    if (g_transpose < -12)
-        g_transpose = -12;
-    if (12 < g_transpose)
-        g_transpose = 12;
+    if (g_transpose < -TRANSPOSE_LIMIT)
+        g_transpose = -TRANSPOSE_LIMIT;
+    if (TRANSPOSE_LIMIT < g_transpose)
+        g_transpose = TRANSPOSE_LIMIT;
 
     if (192 <= g_volume && g_volume < 256)
         g_volume = 0;
