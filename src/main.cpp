@@ -26,6 +26,8 @@ M5_SAM2695 g_midi;
 uint8_t g_tone = 0;
 int8_t g_transpose = 0;
 uint8_t g_volume = 63;
+bool g_test_tone = false;
+bool g_prev_test_tone = false;
 
 bool g_ble_do_scan = false;
 bool g_ble_do_connect = false;
@@ -42,6 +44,22 @@ char g_ble_last_device[18] = "\0";
 #define IS_IN_LEFT(x) (0 <= (x) && (x) < 64)
 #define IS_IN_CENTER(x) (64 <= (x) && (x) < DISPLAY_WIDTH - 64)
 #define IS_IN_RIGHT(x) (DISPLAY_WIDTH - 64 <= (x) && (x) < DISPLAY_WIDTH)
+
+void paint_tone(int fg_color)
+{
+    if (g_test_tone)
+        g_canvas.setTextColor(TFT_YELLOW);
+
+    g_canvas.setCursor(0, SLOT_TEXT(0, 0));
+    g_canvas.setTextSize(4);
+    g_canvas.printf("tone: %i\n", g_tone + 1);
+    g_canvas.setCursor(0, SLOT_TEXT(0, 5));
+    g_canvas.setTextSize(2);
+    g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
+    g_canvas.drawFastHLine(0, SLOT_BOTTOM(0), DISPLAY_WIDTH, fg_color);
+
+    g_canvas.setTextColor(fg_color);
+}
 
 void paint_ble(int fg_color)
 {
@@ -98,13 +116,7 @@ void paint()
     g_canvas.clearDisplay(TFT_BLACK);
     g_canvas.setTextColor(fg_color);
 
-    g_canvas.setCursor(0, SLOT_TEXT(0, 0));
-    g_canvas.setTextSize(4);
-    g_canvas.printf("tone: %i\n", g_tone + 1);
-    g_canvas.setCursor(0, SLOT_TEXT(0, 5));
-    g_canvas.setTextSize(2);
-    g_canvas.printf("%s\n", INSTRUMENT_NAMES[g_tone]);
-    g_canvas.drawFastHLine(0, SLOT_BOTTOM(0), DISPLAY_WIDTH, fg_color);
+    paint_tone(fg_color);
 
     g_canvas.setCursor(0, SLOT_TEXT(1, 0));
     g_canvas.setTextSize(4);
@@ -129,6 +141,16 @@ void apply_values()
 {
     g_midi.setInstrument(0, 0, g_tone);
     g_midi.setMasterVolume(g_volume);
+
+    if (g_test_tone != g_prev_test_tone)
+    {
+        if (g_test_tone)
+            g_midi.setNoteOn(0, NOTE_A4, 127);
+        else
+            g_midi.setNoteOff(0, NOTE_A4, 127);
+
+        g_prev_test_tone = g_test_tone;
+    }
 }
 
 bool handle_touch()
@@ -157,9 +179,21 @@ bool handle_touch()
         if (IS_IN_SLOT(0, touch.y))
         {
             if (IS_IN_LEFT(touch.x))
+            {
                 g_tone--;
+                g_test_tone = false;
+            }
+
+            if (IS_IN_CENTER(touch.x))
+            {
+                g_test_tone = !g_test_tone;
+            }
+
             if (IS_IN_RIGHT(touch.x))
+            {
                 g_tone++;
+                g_test_tone = false;
+            }
         }
 
         if (IS_IN_SLOT(1, touch.y))
